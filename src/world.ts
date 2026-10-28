@@ -78,12 +78,14 @@ function drawSign(g: CanvasRenderingContext2D) {
 
 /** مادة بصورة من Canva إن وُجدت، وإلا بالبديل المرسوم. */
 function imageMaterial(file: string, fallback: THREE.Texture, repeat: [number, number], opts: THREE.MeshStandardMaterialParameters = {}) {
-  fallback.wrapS = fallback.wrapT = THREE.RepeatWrapping;
+  // التكرار بالمرآة يُخفي الحدود بين نسخ الصورة
+  const wrap = repeat[0] > 1 || repeat[1] > 1 ? THREE.MirroredRepeatWrapping : THREE.ClampToEdgeWrapping;
+  fallback.wrapS = fallback.wrapT = wrap;
   fallback.repeat.set(...repeat);
   const mat = new THREE.MeshStandardMaterial({ map: fallback, roughness: 0.85, ...opts });
   new THREE.TextureLoader().load(`img/garage/${file}`, (t) => {
     t.colorSpace = THREE.SRGBColorSpace;
-    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.wrapS = t.wrapT = wrap;
     t.repeat.set(...repeat);
     t.anisotropy = 4;
     mat.map = t;
