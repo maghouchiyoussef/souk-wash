@@ -1,0 +1,48 @@
+name: Build Android
+on:
+  push:
+    branches: [main, 'claude/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install, typecheck and bundle the game
+        run: |
+          npm ci
+          npm run typecheck
+          npm run build
+          npx cap sync android
+      - name: Build release bundle (unsigned) and debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon bundleRelease assembleDebug
+      - name: Publish build to "builds" branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir out
+          cp android/app/build/outputs/bundle/release/app-release.aab out/app-unsigned.aab
+          cp android/app/build/outputs/apk/debug/app-debug.apk out/app-debug.apk
+          echo "Build ${{ github.run_number }} — ${{ github.ref_name }} @ ${GITHUB_SHA::7}" > out/BUILD
+          ls -la out
+          cd out
+          git init -q -b builds
+          git add .
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -q -m "Build ${{ github.run_number }}"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" builds

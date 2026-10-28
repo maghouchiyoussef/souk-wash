@@ -1,0 +1,28 @@
+{
+  "name": "souk-wash",
+  "version": "0.1.0",
+  "private": true,
+  "description": "غسّال الحومة — لعبة تنظيف بالماء المضغوط بهوية مغربية",
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --minify --target=es2020 --outfile=www/js/game.js",
+    "dev": "esbuild src/main.ts --bundle --sourcemap --target=es2020 --outfile=www/js/game.js --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
+    "@types/three": "^0.186.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "appId": "com.devfoxmy.soukwash",
+  "appName": "غسّال الحومة",
+  "webDir": "www",
+  "backgroundColor": "#0e2a3a",
+  "android": { "backgroundColor": "#0e2a3a" },
+  "plugins": {
+    "SplashScreen": { "launchAutoHide": false, "backgroundColor": "#0e2a3a", "showSpinner": false }
+  }
+}
