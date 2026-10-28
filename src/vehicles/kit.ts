@@ -48,12 +48,12 @@ export function planWidth(halfL: number, halfW: number, pFront = 3.2, pRear = 4.
   };
 }
 
-export interface LoftMeta { x: number; zn: number; yn: number }
+export interface LoftMeta { x: number; zn: number; yn: number; y: number }
 
 /** سطح أملس من مقاطع: لكل محطة x، مقطع superellipse بين أسفل وأعلى. يرجع دالة تبني جزءًا مختارًا من السطح. */
 export function loft(
   x0: number, x1: number, stations: number, seg: number,
-  section: (x: number) => { yb: number; yt: number; w: number; q: number; tumble: number; topOnly?: boolean },
+  section: (x: number) => { yb: number; yt: number; w: number; q: number; tumble: number; topOnly?: boolean; r?: number },
 ) {
   const pos: number[] = [], meta: LoftMeta[] = [];
   for (let i = 0; i <= stations; i++) {
@@ -61,6 +61,18 @@ export function loft(
     const x = x0 + (x1 - x0) * (0.5 - 0.5 * Math.cos(Math.PI * u)); // محطات أكثف عند الطرفين
     const s = section(x);
     const yc = s.topOnly ? s.yb : (s.yb + s.yt) / 2, h = s.topOnly ? s.yt - s.yb : (s.yt - s.yb) / 2;
+    if (s.r !== undefined) {
+      // مقطع مستطيل بزوايا مدوّرة، نقاطه موزّعة بالتساوي على المحيط (جوانب مسطّحة بدقّة جيدة)
+      const w = s.w, r = Math.min(s.r, w * 0.95, h * 0.95);
+      const pts = roundedRect(w, h, r, seg);
+      for (const [pz, py] of pts) {
+        const ey = py / h;
+        const up = THREE.MathUtils.clamp(ey, 0, 1);
+        pos.push(x, yc + py, pz * (1 - s.tumble * up * up));
+        meta.push({ x, zn: Math.abs(pz) / w, yn: ey, y: yc + py });
+      }
+      continue;
+    }
     for (let j = 0; j < seg; j++) {
       const t = (j / seg) * Math.PI * 2;
       const c = Math.cos(t), sn = Math.sin(t);
@@ -71,7 +83,7 @@ export function loft(
       const up = THREE.MathUtils.clamp(ey, 0, 1);
       const z = s.w * ez * (1 - s.tumble * up * up) * (1 - 0.04 * Math.max(0, -ey) ** 2);
       pos.push(x, y, z);
-      meta.push({ x, zn: Math.abs(ez), yn: ey });
+      meta.push({ x, zn: Math.abs(ez), yn: ey, y });
     }
   }
   const quads: [number, number, number, number][] = [];
@@ -83,7 +95,7 @@ export function loft(
     const idx: number[] = [];
     for (const [a, b, c, d] of quads) {
       const m = meta[a], m2 = meta[d];
-      if (!pick({ x: (m.x + m2.x) / 2, zn: (m.zn + m2.zn) / 2, yn: (m.yn + m2.yn) / 2 })) continue;
+      if (!pick({ x: (m.x + m2.x) / 2, zn: (m.zn + m2.zn) / 2, yn: (m.yn + m2.yn) / 2, y: (m.y + m2.y) / 2 })) continue;
       idx.push(a, c, b, b, c, d);
     }
     const g = new THREE.BufferGeometry();
@@ -93,6 +105,31 @@ export function loft(
     g.computeVertexNormals();
     return g;
   };
+}
+
+/** نقاط مستطيل (نصف عرض w، نصف ارتفاع h) بزوايا نصف قطرها r، بنفس ترتيب الزاوية t (تبدأ من الجانب +z وتدور نحو الأعلى). */
+function roundedRect(w: number, h: number, r: number, seg: number): [number, number][] {
+  const straightZ = 2 * (w - r), straightY = 2 * (h - r), arc = (Math.PI / 2) * r;
+  const total = 2 * straightZ + 2 * straightY + 4 * arc;
+  const at = (d: number): [number, number] => {
+    // نبدأ من منتصف الجانب +z (z=w, y=0) ونمشي عكس عقارب الساعة
+    const legs: [number, (u: number) => [number, number]][] = [
+      [straightY / 2, (u) => [w, u]],
+      [arc, (u) => { const a = u / r; return [w - r + r * Math.cos(a), h - r + r * Math.sin(a)]; }],
+      [straightZ, (u) => [w - r - u, h]],
+      [arc, (u) => { const a = Math.PI / 2 + u / r; return [-w + r + r * Math.cos(a), h - r + r * Math.sin(a)]; }],
+      [straightY, (u) => [-w, h - r - u]],
+      [arc, (u) => { const a = Math.PI + u / r; return [-w + r + r * Math.cos(a), -h + r + r * Math.sin(a)]; }],
+      [straightZ, (u) => [-w + r + u, -h]],
+      [arc, (u) => { const a = 1.5 * Math.PI + u / r; return [w - r + r * Math.cos(a), -h + r + r * Math.sin(a)]; }],
+      [straightY / 2, (u) => [w, -h + r + u]],
+    ];
+    for (const [len, f] of legs) { if (d <= len) return f(d); d -= len; }
+    return [w, 0];
+  };
+  const out: [number, number][] = [];
+  for (let j = 0; j < seg; j++) out.push(at((j / seg) * total));
+  return out;
 }
 
 // ---------- قوام مرسوم بالكود ----------
