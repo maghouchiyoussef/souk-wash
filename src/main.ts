@@ -47,7 +47,7 @@ function loadLevel(def: LevelDef) {
   model = def.vehicle();
   buildMs = Math.round(performance.now() - t0);
   scene.add(model.root);
-  player.obstacles = [model.box];
+  player.obstacles = [model.box, ...(world.obstacles ?? [])];
   player.area = world.area;
   player.heights = [1.62, 0.95, 2.35, ...(def.extraHeights ?? [])];
   player.reset(world.spawn.x, world.spawn.z, world.spawn.yaw);

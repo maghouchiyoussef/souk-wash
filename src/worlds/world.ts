@@ -11,6 +11,8 @@ export interface World {
   spawn: { x: number; z: number; yaw: number };
   /** نصف قطر دوران الكاميرا في شاشة البداية */
   orbit: number;
+  /** عوائق لا يمشي اللاعب داخلها (مضخّات، أعمدة...) */
+  obstacles?: THREE.Box3[];
 }
 
 /** يحرّر الذاكرة (أشكال، مواد، صور) عند مغادرة المستوى. */
