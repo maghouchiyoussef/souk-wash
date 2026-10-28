@@ -24,17 +24,18 @@ renderer.setPixelRatio(pixelRatio);
 
 const scene = new THREE.Scene();
 const solids = buildWorld(scene, renderer);
+const t0 = performance.now();
 const taxi = buildTaxi();
+const buildMs = Math.round(performance.now() - t0);
 scene.add(taxi.root);
-const surfaces = taxi.surfaces;
-const totalArea = surfaces.reduce((s, x) => s + x.atlas.area, 0);
+const volume = taxi.volume;
 
 const player = new Player(innerWidth / innerHeight);
 player.obstacles.push(taxi.box);
 player.yaw = 0;
 scene.add(player.camera);
 
-const sprayer = new Sprayer(scene, player.camera, surfaces, solids);
+const sprayer = new Sprayer(scene, player.camera, volume, solids);
 const input = new Input($('touch'));
 
 function resize() {
@@ -116,19 +117,14 @@ nativeReady(minimize);
 const tmpBox = new THREE.Box3(), tmpC = new THREE.Vector3(), tmpS = new THREE.Vector3();
 let pitch = 1;
 function measure() {
-  let sum = 0;
-  for (const s of surfaces) {
-    s.measure();
-    if (s.checkDone()) {
-      tmpBox.setFromObject(s.mesh);
-      sprayer.sparkle(tmpBox.getCenter(tmpC), tmpBox.getSize(tmpS));
-      ching(pitch);
-      pitch = pitch >= 1.5 ? 1 : pitch * 1.06;
-      hapticLight();
-    }
-    sum += s.clean * s.atlas.area;
+  for (const part of volume.measure()) {
+    tmpBox.setFromObject(part.mesh);
+    sprayer.sparkle(tmpBox.getCenter(tmpC), tmpBox.getSize(tmpS));
+    ching(pitch);
+    pitch = pitch >= 1.5 ? 1 : pitch * 1.06;
+    hapticLight();
   }
-  clean = surfaces.every((s) => s.done) ? 1 : Math.min(0.999, sum / totalArea);
+  clean = volume.allDone ? 1 : Math.min(0.999, volume.overall());
   const pct = Math.floor(clean * 100);
   pctEl.textContent = `${pct}%`;
   barEl.style.width = `${clean * 100}%`;
@@ -199,7 +195,8 @@ function frame() {
 
   if (scanTime > 0) { scanTime -= dt; if (scanTime <= 0) $('btn-scan').classList.remove('on'); }
   const scan = scanTime > 0 ? Math.min(1, scanTime * 2, (2.6 - scanTime) * 6) : 0;
-  for (const s of surfaces) { s.tick(dt, time, scan); s.upload(); }
+  volume.tick(dt, time, scan);
+  volume.upload();
   sprayer.update(dt, input.spraying && state === 'play');
 
   if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0) toastEl.classList.remove('on'); }
@@ -210,4 +207,4 @@ function frame() {
 
 measure();
 requestAnimationFrame(frame);
-(window as any).__game = { surfaces, player, input, get clean() { return clean; } };
+(window as any).__game = { buildMs, volume, player, input, get clean() { return clean; } };

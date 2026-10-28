@@ -10,8 +10,8 @@
 
 ## البنية
 - `src/` كود اللعبة (TypeScript) — يُجمَّع بـ esbuild إلى `www/js/game.js` داخل CI.
-  - `dirt.ts` نظام الوسخ (قناع لكل جزء + shader) · `uvatlas.ts` توزيع UV لكل وجه
-  - `taxi.ts` النموذج · `world.ts` الساحة · `spray.ts` الرشّاش والجزيئات
+  - `volume.ts` نظام الوسخ: قناع ثلاثي الأبعاد (voxels) يغلّف النموذج + shader
+  - `taxi.ts` الطاكسي · `world.ts` الگراج (صور Canva في `www/img/garage/`) · `spray.ts` الرشّاش والجزيئات
   - `player.ts` / `input.ts` التحكّم · `audio.ts` الأصوات المولّدة · `native.ts` إضافات Capacitor
 - `www/` الواجهة (عربية RTL، خط IBM Plex Sans Arabic)
 - `android/` مشروع Capacitor (targetSdk/compileSdk 36، minSdk 24)

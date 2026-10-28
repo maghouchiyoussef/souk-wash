@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DirtSurface } from './dirt';
+import { DirtVolume } from './volume';
 
 // الرشّاش: نموذج يُمسك باليد، رمي أشعة (raycast) لمعرفة أين يصيب الماء، وجزيئات الرذاذ.
 
@@ -34,8 +34,8 @@ export class Sprayer {
   readonly gun = new THREE.Group();
   private tip = new THREE.Object3D();
   private ray = new THREE.Raycaster();
-  private targets: THREE.Mesh[];
-  private surfaces: DirtSurface[];
+  private targets: THREE.Object3D[];
+  private volume: DirtVolume;
   private envTargets: THREE.Object3D[];
 
   // جزيئات
@@ -50,9 +50,9 @@ export class Sprayer {
   private kick = 0;
   hitDistance = 0;
 
-  constructor(scene: THREE.Scene, camera: THREE.Camera, surfaces: DirtSurface[], envTargets: THREE.Object3D[]) {
-    this.surfaces = surfaces;
-    this.targets = surfaces.map((s) => s.mesh);
+  constructor(scene: THREE.Scene, camera: THREE.Camera, volume: DirtVolume, envTargets: THREE.Object3D[]) {
+    this.volume = volume;
+    this.targets = [volume.root];
     this.envTargets = envTargets;
 
     // نموذج الرشّاش (أصفر وأسود) مثبّت أمام الكاميرا ويُرسم فوق كل شيء.
@@ -97,6 +97,11 @@ export class Sprayer {
     this.life[i] = life;
   }
 
+  private isCar(o: THREE.Object3D | null): boolean {
+    while (o) { if (o === this.volume.root) return true; o = o.parent; }
+    return false;
+  }
+
   /** نجوم صغيرة عند لمعان جزء. */
   sparkle(center: THREE.Vector3, size: THREE.Vector3) {
     for (let i = 0; i < 40; i++) {
@@ -124,25 +129,25 @@ export class Sprayer {
       this.d.copy(fwd).addScaledVector(right, Math.cos(a) * rr).addScaledVector(up, Math.sin(a) * rr).normalize();
       this.ray.set(origin, this.d);
       this.ray.far = RANGE;
-      const hits = this.ray.intersectObjects(all, false);
+      const hits = this.ray.intersectObjects(all, true);
       const h = hits[0];
       let end: THREE.Vector3;
       if (h) {
         end = h.point;
         nearest = Math.min(nearest, h.distance);
-        const surf = h.object.userData.dirt as DirtSurface | undefined;
-        if (surf && h.uv && h.faceIndex != null) {
+        const onCar = this.isCar(h.object);
+        const partIdx = h.object.userData.part as number | undefined;
+        if (onCar) {
           anyHit = true;
           const k = THREE.MathUtils.clamp(1.25 - h.distance / 5, 0.22, 1) * dt;
           const spread = 1 + h.distance * 0.12; // الرذاذ يتوسّع مع المسافة
-          const px = nz.radius * spread * surf.pixelsPerMeter(h.faceIndex);
-          rustLeft = Math.max(rustLeft, surf.spray(h.uv, h.faceIndex, px, { dust: nz.dust * k / spread, mud: nz.mud * k / spread, rust: nz.rust * k / spread }));
+          rustLeft = Math.max(rustLeft, this.volume.spray(h.point, nz.radius * spread, { dust: nz.dust * k / spread, mud: nz.mud * k / spread, rust: nz.rust * k / spread }));
         }
         // رذاذ يرتدّ من السطح
         if (Math.random() < 0.7 && h.face) {
           const n = h.face.normal.clone().transformDirection(h.object.matrixWorld);
           this.v.copy(n).multiplyScalar(1 + Math.random() * 2).add(this.o.set((Math.random() - 0.5) * 2, Math.random() * 1.5, (Math.random() - 0.5) * 2));
-          const dirty = surf && !surf.done;
+          const dirty = partIdx != null && !this.volume.parts[partIdx].done;
           this.emit(end.clone().addScaledVector(n, 0.03), this.v, 0.35 + Math.random() * 0.25, dirty ? 0.72 : 0.85, dirty ? 0.66 : 0.93, dirty ? 0.55 : 1);
         }
       } else {
