@@ -18,6 +18,7 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPrefere
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
+renderer.autoClear = false;
 const MAX_PR = Math.min(devicePixelRatio || 1, 2);
 let pixelRatio = Math.min(MAX_PR, 1.5);
 renderer.setPixelRatio(pixelRatio);
@@ -36,12 +37,14 @@ player.yaw = 0;
 scene.add(player.camera);
 
 const sprayer = new Sprayer(scene, player.camera, volume, solids);
+sprayer.gun.scene.environment = scene.environment;
 const input = new Input($('touch'));
 
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false);
   player.camera.aspect = innerWidth / innerHeight;
   player.camera.updateProjectionMatrix();
+  sprayer.gun.setAspect(player.camera.aspect, player.camera.fov);
   document.body.classList.toggle('portrait', innerHeight > innerWidth);
 }
 addEventListener('resize', resize);
@@ -67,6 +70,7 @@ applyTexts();
 function updateNozzleUI() {
   const nz = NOZZLES[nozzle];
   nozzleEl.textContent = t(nz.id);
+  sprayer.gun.setNozzle(nz.id);
   $('btn-nozzle').dataset.kind = nz.id;
   document.body.dataset.noz = nz.id;
 }
@@ -197,11 +201,15 @@ function frame() {
   const scan = scanTime > 0 ? Math.min(1, scanTime * 2, (2.6 - scanTime) * 6) : 0;
   volume.tick(dt, time, scan);
   volume.upload();
-  sprayer.update(dt, input.spraying && state === 'play');
+  sprayer.update(dt, input.spraying && state === 'play', time);
 
   if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0) toastEl.classList.remove('on'); }
   adaptQuality(dt);
+  // المشهد ثم الرشّاش فوقه (بعمق مستقل حتى لا يدخل في السيارة)
+  renderer.clear();
   renderer.render(scene, player.camera);
+  renderer.clearDepth();
+  renderer.render(sprayer.gun.scene, sprayer.gun.camera);
   requestAnimationFrame(frame);
 }
 

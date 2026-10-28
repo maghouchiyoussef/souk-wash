@@ -41,6 +41,7 @@ export class DirtVolume {
     uTime: { value: 0 },
   };
   private rootInv = new THREE.Matrix4();
+  private rootScale = 1;
   private pendingLayers = new Set<number>();
   private uploaded = false;
   private tmp = new THREE.Vector3();
@@ -50,6 +51,7 @@ export class DirtVolume {
     this.voxel = voxel;
     root.updateMatrixWorld(true);
     this.rootInv.copy(root.matrixWorld).invert();
+    this.rootScale = new THREE.Vector3().setFromMatrixScale(root.matrixWorld).x;
 
     // حدود الشبكة في فضاء النموذج
     const box = new THREE.Box3();
@@ -195,7 +197,7 @@ export class DirtVolume {
   spray(world: THREE.Vector3, radius: number, pw: SprayPower): number {
     const p = this.tmp.copy(world).applyMatrix4(this.rootInv);
     const cx = (p.x - this.min.x) / this.voxel - 0.5, cy = (p.y - this.min.y) / this.voxel - 0.5, cz = (p.z - this.min.z) / this.voxel - 0.5;
-    const r = Math.max(1.2, radius / this.voxel), r2 = r * r;
+    const r = Math.max(1.2, radius / this.rootScale / this.voxel), r2 = r * r;
     const x0 = Math.max(0, Math.floor(cx - r)), x1 = Math.min(this.nx - 1, Math.ceil(cx + r));
     const y0 = Math.max(0, Math.floor(cy - r)), y1 = Math.min(this.ny - 1, Math.ceil(cy + r));
     const z0 = Math.max(0, Math.floor(cz - r)), z1 = Math.min(this.nz - 1, Math.ceil(cz + r));

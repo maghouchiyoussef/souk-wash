@@ -36,6 +36,7 @@ function extrude(shape: THREE.Shape, width: number, bevel: number, segments = 4)
 }
 
 // ---------- المقاطع الجانبية (x للأمام، y للأعلى) ----------
+const CAR_SCALE = 1.1;
 const WHEEL_X = 1.32, WHEEL_R = 0.34, ARCH_R = 0.43, BOTTOM = 0.24;
 
 function bodyShape(): THREE.Shape {
@@ -226,8 +227,11 @@ export function buildTaxi(): Model {
     spokes.children.forEach((c) => overlays.push(c as THREE.Mesh));
   }
 
+  // الطاكسي أكبر بـ 10%
+  root.scale.setScalar(CAR_SCALE);
   const volume = new DirtVolume(root, parts);
   for (const o of overlays) volume.addOverlay(o);
   const box = new THREE.Box3(new THREE.Vector3(-2.1, 0, -0.98), new THREE.Vector3(2.1, 1.7, 0.98));
+  box.min.multiplyScalar(CAR_SCALE); box.max.multiplyScalar(CAR_SCALE);
   return { root, volume, box };
 }
