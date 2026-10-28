@@ -90,6 +90,7 @@ export class Sprayer {
     });
     this.jet = new THREE.Mesh(jg, this.jetMat);
     this.jet.frustumCulled = false;
+    this.jet.renderOrder = 11; // يُرسم بعد الزجاج والملصقات حتى لا يختفي الماء تحتها
     scene.add(this.jet);
 
     const geo = new THREE.BufferGeometry();
@@ -99,6 +100,7 @@ export class Sprayer {
       size: 0.07, map: dotTexture(), vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false,
     }));
     this.points.frustumCulled = false;
+    this.points.renderOrder = 10;
     for (let i = 0; i < MAX_P; i++) this.pos[i * 3 + 1] = -100;
     scene.add(this.points);
   }

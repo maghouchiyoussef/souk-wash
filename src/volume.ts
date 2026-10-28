@@ -362,8 +362,7 @@ dc = mix(dc, vec3(0.25, 0.055, 0.012) * (0.7 + 0.6 * g3), rustA);
 dc = mix(dc, vec3(0.075, 0.042, 0.02) * (0.75 + 0.5 * g1), mudA * 0.96);
 dc = mix(dc, vec3(0.22, 0.18, 0.13) * (0.85 + 0.25 * g1), dustA * 0.85);
 diffuseColor.rgb = dc;
-float dirtAmt = max(max(dustA * 0.85, mudA), rustA);
-diffuseColor.a = mix(diffuseColor.a, 1.0, dirtAmt); // الزجاج المتّسخ لا يُرى عبره`)
+float dirtAmt = max(max(dustA * 0.85, mudA), rustA);`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 roughnessFactor = mix(roughnessFactor, 0.95, dirtAmt);`)
       .replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>

@@ -47,7 +47,7 @@ function curve(points: [number, number][]) {
 }
 
 const bodyTop = curve([[-2.08, 0.86], [-2.0, 0.98], [-1.8, 1.03], [-1.0, 1.03], [0.9, 0.99], [1.35, 0.93], [1.75, 0.86], [1.98, 0.76], [2.08, 0.62]]);
-const roofTop = curve([[-1.92, 1.0], [-1.86, 1.2], [-1.7, 1.38], [-1.2, 1.46], [-0.4, 1.49], [0.12, 1.45], [0.5, 1.26], [0.98, 1.0]]);
+const roofTop = curve([[-1.92, 1.0], [-1.86, 1.18], [-1.7, 1.34], [-1.2, 1.42], [-0.4, 1.44], [0.12, 1.41], [0.5, 1.23], [0.98, 1.0]]);
 
 function bodyBot(x: number) {
   const ax = Math.abs(x);
@@ -225,14 +225,15 @@ export function buildTaxi(): Model {
 
   // ===== المقصورة: زجاج + أعمدة سوداء + سقف أحمر =====
   const cabW = (x: number) => 0.78 * Math.pow(Math.max(0, 1 - Math.pow(Math.abs((x + 0.47) / 1.47), 8)), 1 / 8) + 0.0;
-  const cab = loft(-1.93, 0.99, 70, 40, (x) => ({ yb: bodyTop(x) - 0.03, yt: Math.max(bodyTop(x) - 0.03, roofTop(x)), w: Math.max(0.02, cabW(x)), q: 3.4, tumble: 0.2, topOnly: true }));
+  const cab = loft(-1.93, 0.99, 70, 40, (x) => ({ yb: bodyTop(x) - 0.03, yt: Math.max(bodyTop(x) - 0.03, roofTop(x)), w: Math.max(0.02, cabW(x)), q: 3.4, tumble: 0.24, topOnly: true }));
   const isRoof = (m: { x: number; yn: number }) => m.x > -1.66 && m.x < 0.16 && m.yn > 0.93;
   const isPillar = (m: { x: number; zn: number; yn: number }) =>
     m.yn < 0.12 ||                                   // إطار سفلي للنوافذ
     (m.x > -0.3 && m.x < -0.17 && m.zn > 0.3) ||     // العمود B
     (m.x > 0.12 && m.zn > 0.8 && m.yn > 0.2) ||      // العمود A
     (m.x < -1.62 && m.zn > 0.75);                    // العمود الخلفي
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x0c1418, roughness: 0.03, metalness: 0.6, transparent: true, opacity: 0.8 });
+  // زجاج داكن عاكس (غير شفّاف): يلمع حين ينظف، ولا يُظهر الجهة الأخرى المتّسخة
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x1b2a33, roughness: 0.06, metalness: 0.8 });
   addMesh('glass', cab((m) => !isRoof(m) && !isPillar(m)), glassMat, { mud: 0.3, dust: 0.9, seed: 9 });
   addMesh('pillars', cab((m) => !isRoof(m) && isPillar(m)), plastic(0x0b0c0e, 0.3), { mud: 0.3, seed: 8 });
   addMesh('roof', cab((m) => isRoof(m)), paint(RED), { mud: 0, dust: 1.2, seed: 5 });
@@ -382,19 +383,6 @@ export function buildTaxi(): Model {
     pl.applyMatrix4(onSurf(from, dir, 0.035));
     root.add(pl); overlays.push(pl);
   }
-
-  // ===== الداخل (يُرى عبر الزجاج) =====
-  const inner = plastic(0x2a2c30, 0.8);
-  const interior: [THREE.BufferGeometry, THREE.Matrix4][] = [
-    [new RoundedBoxGeometry(0.5, 0.25, 1.4, 2, 0.06), M([0.62, 0.95, 0])],                  // لوحة القيادة
-    [new THREE.TorusGeometry(0.15, 0.022, 8, 24), M([0.38, 1.05, 0.36], [0, Math.PI / 2, 0.35])], // المقود
-  ];
-  for (const x of [-0.05, -1.0]) for (const z of x > -0.5 ? [0.36, -0.36] : [0]) {
-    const w = x > -0.5 ? 0.5 : 1.3;
-    interior.push([new RoundedBoxGeometry(0.5, 0.14, w, 2, 0.05), M([x, 0.62, z])]);
-    interior.push([new RoundedBoxGeometry(0.12, 0.6, w, 2, 0.05), M([x - 0.24, 0.9, z], [0, 0, 0.18])]);
-  }
-  group('interior', inner, null, interior);
 
   // ===== العجلات =====
   const tireProfile = [new THREE.Vector2(0.24, -0.12), new THREE.Vector2(0.3, -0.122), new THREE.Vector2(0.33, -0.11), new THREE.Vector2(WHEEL_R, -0.07), new THREE.Vector2(WHEEL_R, 0.07), new THREE.Vector2(0.33, 0.11), new THREE.Vector2(0.3, 0.122), new THREE.Vector2(0.24, 0.12)];
