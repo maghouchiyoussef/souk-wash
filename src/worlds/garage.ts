@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import type { World } from './world';
 
 // «گراج لافاج» مغربي: زليج، باب حديدي بقوس، أرضية مبلّلة، لافتة نيون.
 // الصور مصمّمة في Canva وتوضع في www/img/garage/. إن لم تكن موجودة نرسم بديلًا بالكود.
 
 const W = 16, D = 13, H = 4.6; // عرض، عمق، ارتفاع الگراج
-export const AREA = { minX: -W / 2 + 0.7, maxX: W / 2 - 0.7, minZ: -D / 2 + 0.7, maxZ: D / 2 - 0.7 };
 
 function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void) {
   const c = document.createElement('canvas');
@@ -101,8 +101,9 @@ function plane(w: number, h: number, mat: THREE.Material, pos: [number, number, 
   return m;
 }
 
-export function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRenderer): THREE.Object3D[] {
+export function buildGarage(scene: THREE.Scene, renderer: THREE.WebGLRenderer): World {
   const solids: THREE.Object3D[] = [];
+  const root = new THREE.Group();
   scene.background = new THREE.Color(0x1d2226);
 
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -110,21 +111,21 @@ export function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRenderer): T
   scene.environmentIntensity = 0.7;
   pmrem.dispose();
 
-  scene.add(new THREE.HemisphereLight(0xf2f6ff, 0x5c5650, 1.5));
+  root.add(new THREE.HemisphereLight(0xf2f6ff, 0x5c5650, 1.5));
   const top = new THREE.DirectionalLight(0xffffff, 1.7);
   top.position.set(2, 10, 5);
-  scene.add(top);
+  root.add(top);
 
   // الأرضية
   const floor = plane(W, D, imageMaterial('floor.jpg', canvasTex(512, 512, drawFloor), [W / 4, D / 4], { roughness: 0.35, metalness: 0.05 }), [0, 0, 0], 0, -Math.PI / 2);
-  scene.add(floor); solids.push(floor);
+  root.add(floor); solids.push(floor);
   // خطوط صفراء حول مكان السيارة + بالوعة
   const yellow = new THREE.MeshStandardMaterial({ color: 0xf2c230, roughness: 0.6 });
   for (const [w, d, x, z] of [[6.4, 0.12, 0, 1.9], [6.4, 0.12, 0, -1.9], [0.12, 3.9, 3.2, 0], [0.12, 3.9, -3.2, 0]] as number[][]) {
-    scene.add(plane(w, d, yellow, [x, 0.005, z], 0, -Math.PI / 2));
+    root.add(plane(w, d, yellow, [x, 0.005, z], 0, -Math.PI / 2));
   }
   const drain = canvasTex(256, 32, (g) => { g.fillStyle = '#2a2d30'; g.fillRect(0, 0, 256, 32); g.fillStyle = '#0c0d0e'; for (let x = 4; x < 256; x += 10) g.fillRect(x, 5, 5, 22); });
-  scene.add(plane(5.2, 0.32, new THREE.MeshStandardMaterial({ map: drain, roughness: 0.4, metalness: 0.7 }), [0, 0.006, 2.6], 0, -Math.PI / 2));
+  root.add(plane(5.2, 0.32, new THREE.MeshStandardMaterial({ map: drain, roughness: 0.4, metalness: 0.7 }), [0, 0.006, 2.6], 0, -Math.PI / 2));
 
   // الجدران
   const wallTiles = (len: number) => imageMaterial('wall.jpg', canvasTex(1024, 512, drawWall), [len / (H * 2), 1]);
@@ -133,19 +134,19 @@ export function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRenderer): T
   ];
   for (const [x, z, ry, len] of walls) {
     const m = plane(len, H, wallTiles(len), [x, H / 2, z], ry);
-    scene.add(m); solids.push(m);
+    root.add(m); solids.push(m);
   }
   // الباب الحديدي بقوس (الجدار الخلفي)
-  scene.add(plane(6.1, 4.58, imageMaterial('door.jpg', canvasTex(768, 576, drawDoor), [1, 1], { roughness: 0.6 }), [0, 2.29, -D / 2 + 0.02]));
+  root.add(plane(6.1, 4.58, imageMaterial('door.jpg', canvasTex(768, 576, drawDoor), [1, 1], { roughness: 0.6 }), [0, 2.29, -D / 2 + 0.02]));
   // جدار الخراطيم والرفوف (يسار) والجدار الأمامي
   const side = (pos: [number, number, number], ry: number) => plane(8.6, 4.3, imageMaterial('side.jpg', canvasTex(1024, 512, drawWall), [1, 1]), pos, ry);
-  scene.add(side([-W / 2 + 0.02, 2.15, 0], Math.PI / 2));
-  scene.add(side([0, 2.15, D / 2 - 0.02], Math.PI));
+  root.add(side([-W / 2 + 0.02, 2.15, 0], Math.PI / 2));
+  root.add(side([0, 2.15, D / 2 - 0.02], Math.PI));
   // لافتة نيون (يمين)
   const signTex = canvasTex(1024, 256, drawSign);
   const signMat = new THREE.MeshStandardMaterial({ map: signTex, emissive: 0xffffff, emissiveMap: signTex, emissiveIntensity: 0.9, roughness: 0.4 });
   const sign = plane(4.4, 1.1, signMat, [W / 2 - 0.03, 3.3, 0], -Math.PI / 2);
-  scene.add(sign);
+  root.add(sign);
   document.fonts?.load('700 120px Plex', 'غسيل LAVAGE').then(() => {
     const g = (signTex.image as HTMLCanvasElement).getContext('2d')!;
     g.clearRect(0, 0, 1024, 256); drawSign(g); signTex.needsUpdate = true;
@@ -153,24 +154,30 @@ export function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRenderer): T
 
   // السقف وأضواؤه
   const ceil = plane(W, D, new THREE.MeshStandardMaterial({ color: 0x3a3e44, roughness: 0.9 }), [0, H, 0], 0, Math.PI / 2);
-  scene.add(ceil);
+  root.add(ceil);
   const lamp = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.2 });
   for (const z of [-3, 0, 3]) {
     const l = new THREE.Mesh(new THREE.BoxGeometry(4, 0.06, 0.35), lamp);
     l.position.set(0, H - 0.04, z);
-    scene.add(l);
+    root.add(l);
   }
 
   // أغراض بسيطة: دلو، آلة الرشّ، مخروط
   const bucket = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.16, 0.34, 20, 1, true), new THREE.MeshStandardMaterial({ color: 0x2f7fd0, roughness: 0.5, side: THREE.DoubleSide }));
   bucket.position.set(-6.6, 0.17, -4.6);
-  scene.add(bucket);
+  root.add(bucket);
   const machine = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.5), new THREE.MeshStandardMaterial({ color: 0xf2b01e, roughness: 0.45 }));
   machine.position.set(-6.9, 0.45, 3.6);
-  scene.add(machine); solids.push(machine);
+  root.add(machine); solids.push(machine);
   const cone = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.5, 20), new THREE.MeshStandardMaterial({ color: 0xff6a1a, roughness: 0.6 }));
   cone.position.set(5.6, 0.25, 4.4);
-  scene.add(cone);
+  root.add(cone);
 
-  return solids;
+  scene.add(root);
+  return {
+    root, solids,
+    area: { minX: -W / 2 + 0.7, maxX: W / 2 - 0.7, minZ: -D / 2 + 0.7, maxZ: D / 2 - 0.7 },
+    spawn: { x: 0, z: 4.6, yaw: 0 },
+    orbit: 5.8,
+  };
 }

@@ -29,14 +29,15 @@ export function initAudio() {
   src.start();
 }
 
+/** الأصوات (الماء، الأزرار...). الموسيقى لها مفتاحها الخاص. */
 export function setAudioEnabled(on: boolean) {
   enabled = on;
-  if (master) master.gain.value = on ? 0.9 : 0;
+  if (sprayGain && !on) sprayGain.gain.value = 0;
 }
 
 /** شدّة صوت الرش: 0 = متوقّف. hit = هل الماء يضرب سطحًا قريبًا */
 export function setSpray(level: number, narrow: boolean, hit: boolean) {
-  if (!ctx) return;
+  if (!ctx || !enabled) return;
   const t = ctx.currentTime;
   sprayGain.gain.setTargetAtTime(level * (hit ? 0.32 : 0.2), t, 0.04);
   sprayFilter.frequency.setTargetAtTime((narrow ? 2600 : 1500) * (hit ? 1 : 1.4), t, 0.05);
@@ -76,4 +77,82 @@ export function fanfare() {
 export function click() {
   if (!ctx) return;
   tone(880, ctx.currentTime, 0.08, 0.08, 'square');
+}
+
+// ---------- الموسيقى: إيقاع «مقسوم» على الدربوكة ولحن نقري بسلّم الحجاز ----------
+let musicGain: GainNode | null = null;
+let musicOn = false;
+let musicTimer: ReturnType<typeof setInterval> | undefined;
+let nextBeat = 0, step = 0;
+const BPM = 96;
+// د ت _ ت د _ ت _  (D = دوم، T = تك)
+const RHYTHM = ['D', 'T', '', 'T', 'D', '', 'T', ''];
+const HIJAZ = [293.7, 311.1, 370, 392, 440, 466.2, 523.3, 587.3];
+const MELODY = [0, 2, 3, 4, 3, 2, 1, 0, 4, 5, 4, 3, 2, 3, 1, 0, 0, 2, 4, 7, 6, 4, 3, 2, 4, 3, 2, 1, 2, 1, 0, -1];
+
+function noiseBuffer() {
+  const b = ctx!.createBuffer(1, ctx!.sampleRate * 0.2, ctx!.sampleRate);
+  const d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+  return b;
+}
+let nb: AudioBuffer | null = null;
+
+function doum(t: number) {
+  const o = ctx!.createOscillator(), g = ctx!.createGain();
+  o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(55, t + 0.25);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.9, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+  o.connect(g).connect(musicGain!); o.start(t); o.stop(t + 0.4);
+}
+function tek(t: number, vol = 0.35) {
+  const s = ctx!.createBufferSource(), f = ctx!.createBiquadFilter(), g = ctx!.createGain();
+  s.buffer = nb!; f.type = 'highpass'; f.frequency.value = 2500;
+  g.gain.value = vol;
+  s.connect(f).connect(g).connect(musicGain!); s.start(t);
+}
+/** وتر منقور (Karplus-Strong مبسّط بمرشّح) */
+function pluck(freq: number, t: number, vol = 0.22) {
+  const o = ctx!.createOscillator(), f = ctx!.createBiquadFilter(), g = ctx!.createGain();
+  o.type = 'sawtooth'; o.frequency.value = freq;
+  f.type = 'lowpass'; f.frequency.setValueAtTime(freq * 6, t); f.frequency.exponentialRampToValueAtTime(freq * 1.2, t + 0.3);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.008); g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+  o.connect(f).connect(g).connect(musicGain!); o.start(t); o.stop(t + 0.75);
+}
+
+function schedule() {
+  if (!ctx || !musicGain) return;
+  const spb = 60 / BPM / 2; // ثُمن
+  while (nextBeat < ctx.currentTime + 0.35) {
+    const r = RHYTHM[step % RHYTHM.length];
+    if (r === 'D') doum(nextBeat);
+    if (r === 'T') tek(nextBeat);
+    if (step % 2 === 1) tek(nextBeat, 0.08);
+    const n = MELODY[Math.floor(step / 2) % MELODY.length];
+    if (step % 2 === 0 && n >= 0) pluck(HIJAZ[n], nextBeat);
+    if (step % 16 === 0) pluck(HIJAZ[0] / 2, nextBeat, 0.18);
+    nextBeat += spb;
+    step++;
+  }
+}
+
+export function setMusic(on: boolean) {
+  musicOn = on;
+  if (!ctx) return;
+  if (!musicGain) {
+    musicGain = ctx.createGain();
+    musicGain.gain.value = 0;
+    musicGain.connect(master);
+    nb = noiseBuffer();
+  }
+  musicGain.gain.setTargetAtTime(on ? 0.13 : 0, ctx.currentTime, 0.3);
+  if (on && !musicTimer) { nextBeat = ctx.currentTime + 0.1; musicTimer = setInterval(schedule, 120); }
+  if (!on && musicTimer) { setTimeout(() => { if (!musicOn) { clearInterval(musicTimer); musicTimer = undefined; } }, 1200); }
+}
+
+/** صوت الشراء / الدراهم */
+export function coin() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  tone(988, t, 0.12, 0.12, 'square');
+  tone(1319, t + 0.07, 0.3, 0.12, 'square');
 }

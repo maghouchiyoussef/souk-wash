@@ -6,7 +6,8 @@ import * as THREE from 'three';
 // الشبكة محفوظة في DataArrayTexture (طبقة لكل شريحة z)، ونرفع فقط الطبقات التي تغيّرت.
 
 export type DirtFn = (p: THREE.Vector3, n: THREE.Vector3) => [number, number, number];
-export interface SprayPower { dust: number; mud: number; rust: number }
+/** قوة الرش. soap > 0 يعني رشّ الصابون (يضع رغوة ولا ينظّف). */
+export interface SprayPower { dust: number; mud: number; rust: number; soap?: number }
 
 const CLEAN_EPS = 0.08;  // تحت هذه القيمة يُعتبر الجزء نظيفًا
 const PART_DONE = 0.985; // نسبة الإكمال التي «يلمع» بعدها الجزء ويُنظَّف كليًا
@@ -29,6 +30,7 @@ export class DirtVolume {
   readonly min: THREE.Vector3;
   readonly nx: number; readonly ny: number; readonly nz: number;
   readonly dirt: Float32Array;
+  readonly foam: Float32Array;   // رغوة الصابون (0..1)
   readonly pixels: Uint8Array;
   readonly owner: Int16Array;
   readonly tex: THREE.DataArrayTexture;
@@ -66,6 +68,7 @@ export class DirtVolume {
     this.nx = Math.ceil(size.x / voxel); this.ny = Math.ceil(size.y / voxel); this.nz = Math.ceil(size.z / voxel);
     const n = this.nx * this.ny * this.nz;
     this.dirt = new Float32Array(n * 3);
+    this.foam = new Float32Array(n);
     this.pixels = new Uint8Array(n * 4);
     this.owner = new Int16Array(n).fill(-1);
 
@@ -187,7 +190,7 @@ export class DirtVolume {
     this.pixels[o] = d[v * 3] * 255;
     this.pixels[o + 1] = d[v * 3 + 1] * 255;
     this.pixels[o + 2] = d[v * 3 + 2] * 255;
-    this.pixels[o + 3] = 255;
+    this.pixels[o + 3] = this.foam[v] * 255;
   }
 
   /**
@@ -213,21 +216,30 @@ export class DirtVolume {
         const o = this.owner[v];
         if (o < 0 || this.parts[o].done) continue;
         const k = v * 3;
-        if (d[k] <= 0 && d[k + 1] <= 0 && d[k + 2] <= 0) continue;
+        const f = this.foam[v];
+        if (d[k] <= 0 && d[k + 1] <= 0 && d[k + 2] <= 0 && f <= 0) continue;
         touched++;
-        // الطبقات فوق بعضها: الغبار، ثم الطين، ثم الصدأ.
         let budget = 1 - q;
-        const dust = Math.min(d[k], budget * pw.dust);
-        d[k] -= dust;
-        budget -= dust / pw.dust;
-        if (budget > 0 && d[k + 1] > 0) {
-          const mud = Math.min(d[k + 1], budget * pw.mud);
-          d[k + 1] -= mud;
-          budget -= mud / pw.mud;
-        }
-        if (budget > 0 && d[k + 2] > 0) {
-          if (pw.rust > 0) d[k + 2] -= Math.min(d[k + 2], budget * pw.rust);
-          else if (d[k + 1] < 0.05 && d[k + 2] > CLEAN_EPS) rustLeft++;
+        if (pw.soap) {
+          // الصابون: رغوة فقط
+          this.foam[v] = Math.min(1, f + budget * pw.soap);
+        } else {
+          // الماء: الطبقات فوق بعضها: الغبار، ثم الطين، ثم الصدأ. الرغوة تضاعف إزالة الطين والصدأ.
+          const mudPw = pw.mud * (1 + 3 * f), rustPw = pw.rust * (1 + 3 * f) + f * pw.mud * 0.8;
+          const dust = Math.min(d[k], budget * pw.dust);
+          d[k] -= dust;
+          budget -= dust / pw.dust;
+          if (budget > 0 && d[k + 1] > 0) {
+            const mud = Math.min(d[k + 1], budget * mudPw);
+            d[k + 1] -= mud;
+            budget -= mud / mudPw;
+          }
+          if (budget > 0 && d[k + 2] > 0) {
+            if (rustPw > 0) d[k + 2] -= Math.min(d[k + 2], budget * rustPw);
+            else if (d[k + 1] < 0.05 && d[k + 2] > CLEAN_EPS) rustLeft++;
+          }
+          // الماء يشطف الرغوة
+          if (f > 0) this.foam[v] = Math.max(0, f - (1 - q) * pw.dust * 0.25);
         }
         this.writePixel(v);
         this.parts[o].changed = true;
@@ -270,6 +282,7 @@ export class DirtVolume {
         part.clean = 1;
         for (const v of part.owned) {
           d[v * 3] = d[v * 3 + 1] = d[v * 3 + 2] = 0;
+          this.foam[v] = 0;
           this.writePixel(v);
           this.pendingLayers.add(Math.floor(v / (this.nx * this.ny)));
         }
@@ -351,7 +364,8 @@ ${NOISE_GLSL}`)
       .replace('#include <color_fragment>', `#include <color_fragment>
 float dzf = clamp(vDirtQ.z * uVolDims.z - 0.5, 0.0, uVolDims.z - 1.0);
 float dz0 = floor(dzf);
-vec3 dm = mix(texture(dirtVol, vec3(vDirtQ.xy, dz0)).rgb, texture(dirtVol, vec3(vDirtQ.xy, min(dz0 + 1.0, uVolDims.z - 1.0))).rgb, dzf - dz0);
+vec4 dm4 = mix(texture(dirtVol, vec3(vDirtQ.xy, dz0)), texture(dirtVol, vec3(vDirtQ.xy, min(dz0 + 1.0, uVolDims.z - 1.0))), dzf - dz0);
+vec3 dm = dm4.rgb;
 float g1 = dNoise(vDirtW * 26.0), g2 = dNoise(vDirtW * 71.0 + 3.1), g3 = dNoise(vDirtW * 9.0 - 7.0);
 float grain = g1 * 0.6 + g2 * 0.4;
 float rustA = smoothstep(grain * 0.4, grain * 0.4 + 0.15, dm.b);
@@ -361,8 +375,11 @@ vec3 dc = diffuseColor.rgb;
 dc = mix(dc, vec3(0.25, 0.055, 0.012) * (0.7 + 0.6 * g3), rustA);
 dc = mix(dc, vec3(0.075, 0.042, 0.02) * (0.75 + 0.5 * g1), mudA * 0.96);
 dc = mix(dc, vec3(0.22, 0.18, 0.13) * (0.85 + 0.25 * g1), dustA * 0.85);
+// رغوة الصابون: فقاعات بيضاء
+float foamA = smoothstep(0.04, 0.35, dm4.a) * (0.75 + 0.25 * smoothstep(0.3, 0.7, dNoise(vDirtW * 120.0)));
+dc = mix(dc, vec3(0.92, 0.94, 0.97), foamA);
 diffuseColor.rgb = dc;
-float dirtAmt = max(max(dustA * 0.85, mudA), rustA);`)
+float dirtAmt = max(max(max(dustA * 0.85, mudA), rustA), foamA * 0.6);`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 roughnessFactor = mix(roughnessFactor, 0.95, dirtAmt);`)
       .replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>

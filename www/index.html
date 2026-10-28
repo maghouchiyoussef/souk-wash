@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0e2a3a">
-<title>غسّال الحومة</title>
+<title>Lavage Mobile</title>
 <style>
   @font-face{font-family:'Plex'; font-weight:400; font-display:swap; src:url(fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2) format('woff2'); unicode-range:U+0600-06FF,U+0750-077F,U+FB50-FDFF,U+FE70-FEFF;}
   @font-face{font-family:'Plex'; font-weight:600; font-display:swap; src:url(fonts/ibm-plex-sans-arabic-arabic-600-normal.woff2) format('woff2'); unicode-range:U+0600-06FF,U+0750-077F,U+FB50-FDFF,U+FE70-FEFF;}
@@ -81,6 +81,56 @@
   .card{background:var(--panel); border:1px solid var(--border); border-radius:22px; padding:22px 36px; display:flex; flex-direction:column; gap:8px; align-items:center;}
   #done-stars{font-size:46px; color:var(--gold); letter-spacing:6px; direction:ltr;}
   button.cta{border:0; font-family:inherit; animation:none;}
+
+  /* ===== الشاشات ===== */
+  .page{position:fixed; inset:0; z-index:6; display:flex; flex-direction:column; padding:calc(14px + var(--safe-t)) calc(18px + var(--safe-r)) calc(14px + var(--safe-b)) calc(18px + var(--safe-l));
+        background:linear-gradient(180deg,rgba(8,24,36,.55),rgba(8,24,36,.88)); backdrop-filter:blur(3px);}
+  .page.clear{background:linear-gradient(180deg,rgba(8,24,36,.05),rgba(8,24,36,.7)); backdrop-filter:none;}
+  .bar-top{display:flex; align-items:center; gap:12px; min-height:44px;}
+  .bar-top h2{margin:0; font-size:22px; flex:1;}
+  .coins{display:inline-flex; align-items:center; gap:6px; background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:5px 14px; font-weight:700; direction:ltr;}
+  .coins::before{content:''; width:18px; height:18px; border-radius:50%; background:radial-gradient(circle at 35% 35%,#ffe28a,#d9a520); box-shadow:inset 0 0 0 2px #b8860b;}
+  .ibtn{background:var(--panel); border:1px solid var(--border); color:var(--text); border-radius:12px; padding:8px 14px; font:inherit; font-weight:600;}
+  .title-wrap{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center;}
+  .logo{font-size:clamp(40px,8vw,68px); font-weight:700; letter-spacing:1px; direction:ltr; text-shadow:0 4px 22px rgba(0,0,0,.5);}
+  .logo b{color:var(--water);}
+  .tagline{color:var(--soft); font-size:16px; margin-top:-6px;}
+  .menu{display:flex; gap:12px; margin-top:16px; flex-wrap:wrap; justify-content:center;}
+  .mbtn{min-width:150px; padding:13px 22px; border-radius:16px; border:0; font:inherit; font-weight:700; font-size:18px; color:#05202d; background:var(--water);}
+  .mbtn.alt{background:var(--panel); color:var(--text); border:1px solid var(--border);}
+  .cards{flex:1; display:flex; gap:12px; align-items:center; overflow-x:auto; padding:10px 2px; scroll-snap-type:x mandatory;}
+  .card-l{flex:0 0 min(30vw,200px); height:min(62vh,230px); border-radius:18px; background:var(--panel); border:1px solid var(--border); display:flex; flex-direction:column;
+          align-items:center; justify-content:center; gap:6px; padding:12px; text-align:center; scroll-snap-align:center; position:relative;}
+  .card-l .ic{font-size:54px;}
+  .card-l .nm{font-weight:700; font-size:17px;}
+  .card-l .pl{color:var(--soft); font-size:13px;}
+  .card-l .st{color:var(--gold); font-size:22px; letter-spacing:3px; direction:ltr;}
+  .card-l.locked{opacity:.45;}
+  .card-l.locked::after{content:'🔒'; position:absolute; top:10px; inset-inline-end:12px; font-size:20px;}
+  .grid{flex:1; display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; overflow-y:auto; padding:10px 2px; align-content:start;}
+  .item{background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:6px;}
+  .item .ic{font-size:30px;}
+  .item .nm{font-weight:700;}
+  .item .ds{color:var(--soft); font-size:13px; flex:1;}
+  .item button{border:0; border-radius:12px; padding:9px; font:inherit; font-weight:700; background:var(--gold); color:#2a1a00;}
+  .item button:disabled{background:rgba(255,255,255,.12); color:var(--soft);}
+  .rows{flex:1; display:flex; flex-direction:column; gap:10px; overflow-y:auto; padding:10px 2px; max-width:560px; width:100%; margin:0 auto;}
+  .row{display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:10px 14px; font-weight:600;}
+  .row input[type=range]{width:45%;}
+  .seg{display:flex; gap:6px;}
+  .seg button{border:1px solid var(--border); background:transparent; color:var(--text); border-radius:10px; padding:6px 12px; font:inherit;}
+  .seg button.on{background:var(--water); color:#05202d; border-color:transparent;}
+  .tgl{width:52px; height:30px; border-radius:15px; background:rgba(255,255,255,.18); border:0; position:relative;}
+  .tgl::after{content:''; position:absolute; top:3px; inset-inline-start:3px; width:24px; height:24px; border-radius:50%; background:#fff; transition:all .2s;}
+  .tgl.on{background:var(--water);} .tgl.on::after{inset-inline-start:25px;}
+  #btn-pause{position:absolute; top:calc(10px + var(--safe-t)); inset-inline-end:calc(14px + var(--safe-r)); pointer-events:auto; width:44px; height:44px; border-radius:12px;
+             background:var(--panel); border:1px solid var(--border); color:#fff; font-size:18px;}
+  #btn-soap{right:212px; bottom:96px; width:64px; height:64px;}
+  #btn-soap.on{background:rgba(255,255,255,.85); color:#05202d;}
+  #btn-soap.on svg{stroke:#05202d;}
+  .modal{position:fixed; inset:0; z-index:7; display:flex; align-items:center; justify-content:center; background:rgba(5,15,22,.6);}
+  .done-coins{font-size:22px; font-weight:700; color:var(--gold);}
+  .btn-row{display:flex; gap:10px; margin-top:6px;}
   #rotate{position:fixed; inset:0; z-index:9; display:none; align-items:center; justify-content:center; background:var(--bg); font-size:20px; font-weight:600;}
   body.portrait #rotate{display:flex;}
 </style>
@@ -98,6 +148,7 @@
     <span id="time">0:00</span>
   </div>
   <div id="fps"></div>
+  <button id="btn-pause" aria-label="pause">❚❚</button>
   <div class="cross"></div>
   <div class="joy-hint"></div>
   <div id="toast"></div>
@@ -114,6 +165,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
       <span data-t="scan"></span>
     </button>
+    <button class="btn hidden" id="btn-soap" aria-label="soap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="8" cy="14" r="4"/><circle cx="15" cy="9" r="3"/><circle cx="17" cy="16" r="2.5"/></svg>
+      <span data-t="soap"></span>
+    </button>
     <button class="btn" id="btn-height" data-level="0" aria-label="height">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M7 8l5-5 5 5M7 16l5 5 5-5"/></svg>
       <span data-t="height"></span>
@@ -121,19 +176,59 @@
   </div>
 </div>
 
-<div id="start" class="screen">
-  <h1>غسّال <span>الحومة</span></h1>
-  <p data-t="subtitle"></p>
-  <div class="cta" data-t="tapToStart"></div>
-  <p class="how" data-t="howto"></p>
+<div id="title" class="page clear">
+  <div class="bar-top"><span style="flex:1"></span><span class="coins" id="coins-title">0</span></div>
+  <div class="title-wrap">
+    <div class="logo">Lavage <b>Mobile</b></div>
+    <div class="tagline" data-t="tagline"></div>
+    <div class="menu">
+      <button class="mbtn" id="go-play" data-t="play"></button>
+      <button class="mbtn alt" id="go-shop" data-t="shop"></button>
+      <button class="mbtn alt" id="go-settings" data-t="settings"></button>
+    </div>
+    <p class="tagline how" data-t="howto" style="font-size:12px;margin-top:10px;opacity:.75"></p>
+  </div>
 </div>
 
-<div id="done" class="screen hidden">
+<div id="map" class="page hidden">
+  <div class="bar-top"><button class="ibtn back" data-t="back"></button><h2 data-t="levels"></h2><span class="coins" id="coins-map">0</span></div>
+  <div class="cards" id="cards"></div>
+</div>
+
+<div id="shop" class="page hidden">
+  <div class="bar-top"><button class="ibtn back" data-t="back"></button><h2 data-t="shop"></h2><span class="coins" id="coins-shop">0</span></div>
+  <div class="grid" id="items"></div>
+</div>
+
+<div id="settings" class="page hidden">
+  <div class="bar-top"><button class="ibtn back" data-t="back"></button><h2 data-t="settings"></h2></div>
+  <div class="rows">
+    <div class="row"><span data-t="sound"></span><button class="tgl" id="set-sound"></button></div>
+    <div class="row"><span data-t="music"></span><button class="tgl" id="set-music"></button></div>
+    <div class="row"><span data-t="haptics"></span><button class="tgl" id="set-haptics"></button></div>
+    <div class="row"><span data-t="sens"></span><input type="range" id="set-sens" min="0.4" max="2" step="0.1"></div>
+    <div class="row"><span data-t="lang"></span><div class="seg" id="set-lang"><button data-l="ar">العربية</button><button data-l="fr">Français</button><button data-l="en">English</button></div></div>
+  </div>
+</div>
+
+<div id="pause" class="modal hidden">
   <div class="card">
-    <h1 data-t="doneTitle" style="font-size:34px"></h1>
+    <h1 data-t="pause" style="font-size:30px;margin:0"></h1>
+    <div class="btn-row"><button class="mbtn" id="resume" data-t="resume"></button><button class="mbtn alt" id="quit" data-t="quit"></button></div>
+  </div>
+</div>
+
+<div id="done" class="modal hidden">
+  <div class="card">
+    <h1 data-t="doneTitle" style="font-size:32px;margin:0"></h1>
     <div id="done-stars"></div>
-    <p><span data-t="time"></span>: <b id="done-time" dir="ltr"></b></p>
-    <button class="cta" id="again" data-t="again"></button>
+    <p style="margin:0"><span data-t="time"></span>: <b id="done-time" dir="ltr"></b></p>
+    <div class="done-coins"><span dir="ltr">+<span id="done-coins">0</span></span> <span data-t="dh"></span></div>
+    <div class="btn-row">
+      <button class="mbtn" id="done-next" data-t="next"></button>
+      <button class="mbtn alt" id="done-again" data-t="again"></button>
+      <button class="mbtn alt" id="done-map" data-t="map"></button>
+    </div>
   </div>
 </div>
 

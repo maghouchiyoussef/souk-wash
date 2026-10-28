@@ -5,7 +5,7 @@ import { WaterGun } from './gun';
 // الرشّاش: نموذج يُمسك باليد، رمي أشعة (raycast) لمعرفة أين يصيب الماء، وجزيئات الرذاذ.
 
 export interface Nozzle {
-  id: 'narrow' | 'wide';
+  id: 'narrow' | 'wide' | 'turbo';
   cone: number;      // زاوية انتشار الأشعة (راديان)
   rays: number;      // عدد الأشعة في كل إطار
   radius: number;    // نصف قطر أثر كل شعاع على السطح (متر)
@@ -15,6 +15,7 @@ export interface Nozzle {
 export const NOZZLES: Nozzle[] = [
   { id: 'wide', cone: 0.075, rays: 7, radius: 0.18, dust: 5.4, mud: 2.0, rust: 0 },
   { id: 'narrow', cone: 0.012, rays: 3, radius: 0.07, dust: 13, mud: 6.5, rust: 1.0 },
+  { id: 'turbo', cone: 0.045, rays: 6, radius: 0.13, dust: 12, mud: 6, rust: 0.8 },
 ];
 
 const RANGE = 8.5;
@@ -58,9 +59,10 @@ export class Sprayer {
   private jetOn = 0;
   private nozzle: Nozzle = NOZZLES[0];
   private ray = new THREE.Raycaster();
-  private targets: THREE.Object3D[];
-  private volume: DirtVolume;
-  private envTargets: THREE.Object3D[];
+  private targets!: THREE.Object3D[];
+  private volume!: DirtVolume;
+  private soap = false;
+  private envTargets!: THREE.Object3D[];
 
   // جزيئات
   private pos = new Float32Array(MAX_P * 3);
@@ -74,9 +76,7 @@ export class Sprayer {
   hitDistance = 0;
 
   constructor(scene: THREE.Scene, camera: THREE.Camera, volume: DirtVolume, envTargets: THREE.Object3D[]) {
-    this.volume = volume;
-    this.targets = [volume.root];
-    this.envTargets = envTargets;
+    this.setTargets(volume, envTargets);
 
     this.gun = new WaterGun((camera as THREE.PerspectiveCamera).fov);
 
@@ -130,7 +130,20 @@ export class Sprayer {
   /**
    * يرشّ إطارًا واحدًا. يرجع: هل أصاب الماء سطحًا قريبًا، وكمية الصدأ التي لم يزلها.
    */
-  spray(dt: number, camera: THREE.Camera, nz: Nozzle): { hit: boolean; rustLeft: number } {
+  /** عند تغيير المستوى: المركبة والأسطح الجديدة */
+  setTargets(volume: DirtVolume, envTargets: THREE.Object3D[]) {
+    this.volume = volume;
+    this.targets = [volume.root];
+    this.envTargets = envTargets;
+    this.life.fill(0);
+    for (let i = 0; i < MAX_P; i++) this.pos[i * 3 + 1] = -100;
+  }
+
+  /**
+   * يرشّ إطارًا واحدًا. power: مضاعف قوة المضخّة. soap: رشّ صابون بدل الماء.
+   */
+  spray(dt: number, camera: THREE.Camera, nz: Nozzle, power = 1, soap = false): { hit: boolean; rustLeft: number } {
+    this.soap = soap;
     camera.updateMatrixWorld();
     const origin = new THREE.Vector3().setFromMatrixPosition(camera.matrixWorld);
     const fwd = new THREE.Vector3(0, 0, -1).transformDirection(camera.matrixWorld);
@@ -159,7 +172,8 @@ export class Sprayer {
           anyHit = true;
           const k = THREE.MathUtils.clamp(1.25 - h.distance / 5, 0.22, 1) * dt;
           const spread = 1 + h.distance * 0.12; // الرذاذ يتوسّع مع المسافة
-          rustLeft = Math.max(rustLeft, this.volume.spray(h.point, nz.radius * spread, { dust: nz.dust * k / spread, mud: nz.mud * k / spread, rust: nz.rust * k / spread }));
+          const kk = k * power / spread;
+          rustLeft = Math.max(rustLeft, this.volume.spray(h.point, nz.radius * spread * (soap ? 1.3 : 1), soap ? { dust: 0, mud: 0, rust: 0, soap: 4 * k } : { dust: nz.dust * kk, mud: nz.mud * kk, rust: nz.rust * kk }));
         }
         // رذاذ يرتدّ من السطح
         if (h.face) {
@@ -180,7 +194,8 @@ export class Sprayer {
         this.v.subVectors(end, tipW).normalize().multiplyScalar(JET_SPEED + Math.random() * 5);
         this.v.x += (Math.random() - 0.5) * 0.6; this.v.y += (Math.random() - 0.5) * 0.6; this.v.z += (Math.random() - 0.5) * 0.6;
         const p = tipW.clone().addScaledVector(this.v, Math.random() * 0.02);
-        this.emit(p, this.v, Math.min(0.4, (h ? h.distance : RANGE) / JET_SPEED), 0.82, 0.94, 1);
+        if (soap) this.emit(p, this.v, Math.min(0.4, (h ? h.distance : RANGE) / JET_SPEED), 1, 0.97, 1);
+        else this.emit(p, this.v, Math.min(0.4, (h ? h.distance : RANGE) / JET_SPEED), 0.82, 0.94, 1);
       }
     }
     this.hitDistance = nearest;
@@ -195,8 +210,9 @@ export class Sprayer {
     const len = Math.max(0.05, dir.length());
     this.jet.position.copy(tipW);
     this.jet.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
-    const r0 = nz.id === 'wide' ? 0.012 : 0.006;
-    const r1 = nz.id === 'wide' ? Math.max(0.05, dist * nz.cone * 0.9) : 0.03;
+    const fan = nz.id !== 'narrow';
+    const r0 = fan ? 0.012 : 0.006;
+    const r1 = fan ? Math.max(0.05, dist * nz.cone * 0.9) : 0.03;
     const pos = this.jet.geometry.getAttribute('position') as THREE.BufferAttribute;
     const arr = pos.array as Float32Array, base = this.jetBase;
     for (let i = 0; i < arr.length; i += 3) {
@@ -206,6 +222,7 @@ export class Sprayer {
       arr[i + 1] = t * len;
       // الرأس العريض يعطي مروحة مسطّحة
       arr[i + 2] = base[i + 2] * (nz.id === 'wide' ? r * 0.25 : r);
+      if (nz.id === 'turbo') { const a = t * 30 + performance.now() * 0.02; arr[i] += Math.sin(a) * r * 0.3; }
     }
     pos.needsUpdate = true;
     this.jet.geometry.computeBoundingSphere();
@@ -229,7 +246,8 @@ export class Sprayer {
 
     // النفّاثة: تظهر أثناء الرش وتختفي بسرعة بعده، وخطوطها تجري نحو الهدف
     if (!spraying) this.jetOn = Math.max(0, this.jetOn - dt * 10);
-    this.jetMat.opacity = this.jetOn * (this.nozzle.id === 'wide' ? 0.55 : 0.85);
+    this.jetMat.opacity = this.jetOn * (this.nozzle.id === 'narrow' ? 0.85 : 0.55);
+    this.jetMat.color.set(this.soap ? 0xffffff : 0xcfeeff);
     this.jet.visible = this.jetOn > 0.01;
     (this.jetMat.map as THREE.Texture).offset.y -= dt * 9;
     this.gun.update(dt, spraying, time);

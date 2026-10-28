@@ -23,6 +23,7 @@ export class WaterGun {
   private pressure = 0;
   private kick = 0;
   private spin = 0;
+  private turbo = false;
   private targetSpin = 0;
   private aimDist = 5;
   private readonly base = new THREE.Vector3(0.13, -0.145, -0.33);
@@ -110,14 +111,18 @@ export class WaterGun {
     }
     g.fillStyle = level ? '#e8fbff' : '#4c6670';
     g.font = '700 13px sans-serif';
-    g.fillText(`${level * 25} BAR`, 8, 16);
+    g.fillText(`${Math.round((level / BARS) * this.maxBar)} BAR`, 8, 16);
     this.screenTex.needsUpdate = true;
     this.shownLevel = level;
   }
 
-  setNozzle(id: 'wide' | 'narrow') {
-    this.narrowHead.visible = id === 'narrow';
+  /** أقصى ضغط يظهر في الشاشة (يتغيّر مع ترقيات المضخّة) */
+  maxBar = 150;
+
+  setNozzle(id: 'wide' | 'narrow' | 'turbo') {
+    this.narrowHead.visible = id !== 'wide';
     this.wideHead.visible = id === 'wide';
+    this.turbo = id === 'turbo';
     this.targetSpin += Math.PI; // دوران قصير عند تبديل الرأس
   }
 
@@ -152,6 +157,8 @@ export class WaterGun {
     this.kick = spraying ? 1 : Math.max(0, this.kick - dt * 6);
     const j = this.kick * 0.004;
     this.spin += (this.targetSpin - this.spin) * Math.min(1, dt * 10);
+    // رأس التوربو يدور باستمرار أثناء الرش
+    if (this.turbo && spraying) this.targetSpin += dt * 40;
     this.heads.rotation.z = this.spin;
     this.group.position.set(this.base.x + (Math.random() - 0.5) * j, this.base.y + (Math.random() - 0.5) * j, this.base.z + this.kick * 0.012);
   }
