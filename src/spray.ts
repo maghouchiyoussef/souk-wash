@@ -172,7 +172,7 @@ export class Sprayer {
       } else {
         end = this.o.copy(origin).addScaledVector(this.d, RANGE);
       }
-      if (r === 0) this.jetEnd.copy(end);
+      if (r === 0) { this.jetEnd.copy(end); this.gun.aimAt(h ? h.distance : RANGE); }
       // ماء طائر من فوهة الرشّاش نحو الهدف
       for (let k = 0; k < 2; k++) {
         this.v.subVectors(end, tipW).normalize().multiplyScalar(JET_SPEED + Math.random() * 5);
