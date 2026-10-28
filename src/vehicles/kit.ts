@@ -63,10 +63,10 @@ export function loft(
     const yc = s.topOnly ? s.yb : (s.yb + s.yt) / 2, h = s.topOnly ? s.yt - s.yb : (s.yt - s.yb) / 2;
     if (s.r !== undefined) {
       // مقطع مستطيل بزوايا مدوّرة، نقاطه موزّعة بالتساوي على المحيط (جوانب مسطّحة بدقّة جيدة)
-      const w = s.w, r = Math.min(s.r, w * 0.95, h * 0.95);
-      const pts = roundedRect(w, h, r, seg);
+      const w = Math.max(s.w, 1e-3), hh = Math.max(h, 1e-3), r = Math.max(1e-4, Math.min(s.r, w * 0.95, hh * 0.95));
+      const pts = roundedRect(w, hh, r, seg);
       for (const [pz, py] of pts) {
-        const ey = py / h;
+        const ey = py / hh;
         const up = THREE.MathUtils.clamp(ey, 0, 1);
         pos.push(x, yc + py, pz * (1 - s.tumble * up * up));
         meta.push({ x, zn: Math.abs(pz) / w, yn: ey, y: yc + py });

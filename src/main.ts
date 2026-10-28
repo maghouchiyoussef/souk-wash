@@ -236,7 +236,7 @@ on('btn-pause', () => { if (state !== 'play') return; state = 'pause'; setSpray(
 on('resume', () => { state = 'play'; $('pause').classList.add('hidden'); });
 on('quit', backToMap);
 on('done-next', () => startLevel(LEVELS[LEVELS.indexOf(level) + 1]));
-on('done-again', () => { loadLevel(level); startLevel(level); });
+on('done-again', () => startLevel(level));
 on('done-map', backToMap);
 on('set-sound', () => { save.settings.sound = !save.settings.sound; renderSettings(); applySettings(); });
 on('set-music', () => { save.settings.music = !save.settings.music; renderSettings(); applySettings(); });
