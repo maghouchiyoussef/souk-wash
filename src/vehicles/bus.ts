@@ -59,8 +59,8 @@ export function buildBus(): Model {
       panes.push([new RoundedBoxGeometry(x0 - x1, 0.72, 0.02, 2, 0.05), S([(x0 + x1) / 2, 2.0, sz * 3], [0, 0, -sz], 0.012)]);
     }
   }
-  frames.push([new RoundedBoxGeometry(1.7, 0.82, 0.02, 2, 0.08), S([-5, 2.02, 0], [1, 0, 0], 0.004)]);
-  panes.push([new RoundedBoxGeometry(1.56, 0.7, 0.02, 2, 0.06), S([-5, 2.02, 0], [1, 0, 0], 0.012)]);
+  frames.push([new RoundedBoxGeometry(1.7, 0.82, 0.02, 2, 0.08), S([-5, 2.02, 0.02], [1, 0, 0], 0.004)]);
+  panes.push([new RoundedBoxGeometry(1.56, 0.7, 0.02, 2, 0.06), S([-5, 2.02, 0.02], [1, 0, 0], 0.012)]);
   kit.group('window-frames', plastic(0x0b0c0e, 0.35), { mud: 0.3, seed: 8 }, frames);
   kit.group('windows', glass(), { mud: 0.4, dust: 1, seed: 10 }, panes);
 
@@ -78,7 +78,7 @@ export function buildBus(): Model {
     [new RoundedBoxGeometry(1.0, 0.24, 0.03, 2, 0.02), S([5, 0.82, 0], [-1, 0, 0])],
   ]);
   kit.setSurface(body, glassMesh);
-  kit.decal(frontText(), 1.3, 0.24, S([5, 2.6, 0], [-1, 0, 0], 0.012), false);
+  kit.decal(frontText(), 1.3, 0.24, S([5, 2.6, 0.02], [-1, 0, 0], 0.012), false);
   kit.setSurface(body);
   // الكسوة السوداء: صدّامان، جوانب
   const clad: Item[] = [

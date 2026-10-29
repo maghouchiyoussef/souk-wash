@@ -43,7 +43,14 @@ def logo(size, transparent=False, scale=1.0):
     d = ImageDraw.Draw(img)
     c = S / 2
     k = scale
-    star8(d, c, c, S * 0.40 * k, outline=(227, 176, 75, 255), width=int(S * 0.018 * k))
+    # إطار النجمة الثمانية بزوايا متّصلة (بدون فراغات)
+    r, w = S * 0.40 * k, int(S * 0.02 * k)
+    pts = []
+    for i in range(16):
+        a = math.pi * i / 8 - math.pi / 2
+        rr = r if i % 2 == 0 else r * 0.72
+        pts.append((c + rr * math.cos(a), c + rr * math.sin(a)))
+    d.line(pts + pts[:2], fill=(227, 176, 75, 255), width=w, joint='curve')
     drop(d, c, c + S * 0.08 * k, S * 0.2 * k, (245, 250, 255, 255))
     drop(d, c - S * 0.04 * k, c + S * 0.11 * k, S * 0.11 * k, (79, 195, 247, 255))
     # لمعة

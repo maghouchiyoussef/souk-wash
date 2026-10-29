@@ -379,7 +379,7 @@ function frame() {
   requestAnimationFrame(frame);
   initAds();
   (window as any).__game = {
-    get buildMs() { return buildMs; }, get volume() { return model.volume; }, player, input, save,
+    get buildMs() { return buildMs; }, get volume() { return model.volume; }, player, input, save, applyLang,
     get clean() { return clean; }, startLevel: (i: number) => startLevel(LEVELS[i]),
   };
 })();
