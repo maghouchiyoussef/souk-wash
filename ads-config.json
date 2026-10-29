@@ -1,7 +1,7 @@
 {
   "_note": "أكواد AdMob. الآن أكواد الاختبار من Google. ضع أكوادك الحقيقية هنا (من GitHub على الهاتف) ثم اجعل testMode = false قبل النشر.",
   "testMode": true,
-  "appId": "ca-app-pub-3940256099942544~3347511713",
-  "interstitialId": "ca-app-pub-3940256099942544/1033173712",
-  "rewardedId": "ca-app-pub-3940256099942544/5224354917"
+  "appId": "ca-app-pub-2986107222837015~4428791941",
+  "interstitialId": "ca-app-pub-2986107222837015/5535870384",
+  "rewardedId": "ca-app-pub-2986107222837015/4992944904"
 }
