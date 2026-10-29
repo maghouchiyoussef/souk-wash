@@ -30,9 +30,24 @@ jobs:
           npx cap sync android
       - name: Build release bundle (unsigned) and debug APK
         working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon bundleRelease assembleDebug
+      - name: Sign release bundle (if the upload key secrets exist)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then echo "No signing secrets: AAB stays unsigned"; exit 0; fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          cp android/app/build/outputs/bundle/release/app-release.aab "$RUNNER_TEMP/signed.aab"
+          jarsigner -sigalg SHA256withRSA -digestalg SHA-256 -keystore "$RUNNER_TEMP/upload.jks" \
+            -storepass "$KEYSTORE_PASSWORD" "$RUNNER_TEMP/signed.aab" "$KEY_ALIAS"
+          jarsigner -verify "$RUNNER_TEMP/signed.aab" | tail -1
+          rm -f "$RUNNER_TEMP/upload.jks"
       - name: Publish build to "builds" branch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -40,7 +55,8 @@ jobs:
           mkdir out
           cp android/app/build/outputs/bundle/release/app-release.aab out/app-unsigned.aab
           cp android/app/build/outputs/apk/debug/app-debug.apk out/app-debug.apk
-          echo "Build ${{ github.run_number }} — ${{ github.ref_name }} @ ${GITHUB_SHA::7}" > out/BUILD
+          if [ -f "$RUNNER_TEMP/signed.aab" ]; then cp "$RUNNER_TEMP/signed.aab" out/app-release-signed.aab; fi
+          echo "Build ${{ github.run_number }} (versionCode ${{ github.run_number }}) — ${{ github.ref_name }} @ ${GITHUB_SHA::7}" > out/BUILD
           ls -la out
           cd out
           git init -q -b builds
