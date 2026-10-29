@@ -44,7 +44,13 @@ jobs:
           if [ -z "$KEYSTORE_BASE64" ]; then echo "No signing secrets: AAB stays unsigned"; exit 0; fi
           # نحذف أي فراغات أو أسطر زائدة قد تأتي مع اللصق
           printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/upload.jks" || { echo "::error::KEYSTORE_BASE64 غير صالح: الصق محتوى KEYSTORE_BASE64.txt كاملًا"; exit 1; }
-          keytool -list -keystore "$RUNNER_TEMP/upload.jks" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null || { echo "::error::كلمة السر أو KEY_ALIAS غير صحيحة"; exit 1; }
+          # نحذف الفراغات والأسطر الزائدة من كلمة السر والاسم (كلمة السر حروف وأرقام فقط)
+          KEYSTORE_PASSWORD="$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '[:space:]')"
+          KEY_ALIAS="$(printf '%s' "$KEY_ALIAS" | tr -d '[:space:]')"
+          # تشخيص بدون كشف السرّ: الطول ونوع الحروف فقط
+          echo "password length: ${#KEYSTORE_PASSWORD}, alnum-only: $([[ "$KEYSTORE_PASSWORD" =~ ^[A-Za-z0-9]+$ ]] && echo yes || echo no), alias length: ${#KEY_ALIAS}"
+          keytool -list -keystore "$RUNNER_TEMP/upload.jks" -storepass "$KEYSTORE_PASSWORD" >/dev/null 2>&1 || { echo "::error::KEYSTORE_PASSWORD غير صحيحة (المفروض 28 حرفًا ورقمًا، بدون Secret: وبدون فراغات)"; exit 1; }
+          keytool -list -keystore "$RUNNER_TEMP/upload.jks" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1 || { echo "::error::KEY_ALIAS غير صحيح (المفروض: upload)"; exit 1; }
           cp android/app/build/outputs/bundle/release/app-release.aab "$RUNNER_TEMP/signed.aab"
           jarsigner -sigalg SHA256withRSA -digestalg SHA-256 -keystore "$RUNNER_TEMP/upload.jks" \
             -storepass "$KEYSTORE_PASSWORD" "$RUNNER_TEMP/signed.aab" "$KEY_ALIAS"
