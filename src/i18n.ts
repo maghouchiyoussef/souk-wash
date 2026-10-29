@@ -59,6 +59,11 @@ const ar = {
   i_power3: 'ضغط +120%', i_power3d: 'مضخّة صناعية',
   i_soap: 'صابون الرغوة', i_soapd: 'يذيب الطين والصدأ، ثم اشطفه بالماء',
   i_turbo: 'رأس توربو', i_turbod: 'قوي وعريض في نفس الوقت',
+  double: 'شاهد إعلانًا وضاعف الدراهم',
+  privacy: 'خيارات الخصوصية (الإعلانات)',
+  manage: 'تعديل',
+  policy: 'سياسة الخصوصية',
+  open: 'فتح',
 };
 
 type Dict = typeof ar;
@@ -78,6 +83,7 @@ const fr: Dict = {
   i_power1: 'Pression +35 %', i_power1d: 'Pompe plus forte : nettoyage plus rapide', i_power2: 'Pression +75 %', i_power2d: 'Pompe professionnelle',
   i_power3: 'Pression +120 %', i_power3d: 'Pompe industrielle', i_soap: 'Savon moussant', i_soapd: 'Dissout boue et rouille, puis rincez',
   i_turbo: 'Buse turbo', i_turbod: 'Puissante et large à la fois',
+  double: 'Regardez une pub et doublez vos dirhams', privacy: 'Confidentialité (publicités)', manage: 'Gérer', policy: 'Politique de confidentialité', open: 'Ouvrir',
 };
 
 const en: Dict = {
@@ -94,6 +100,7 @@ const en: Dict = {
   i_power1: 'Pressure +35%', i_power1d: 'Stronger pump: faster cleaning', i_power2: 'Pressure +75%', i_power2d: 'Professional pump',
   i_power3: 'Pressure +120%', i_power3d: 'Industrial pump', i_soap: 'Foam soap', i_soapd: 'Dissolves mud and rust, then rinse',
   i_turbo: 'Turbo nozzle', i_turbod: 'Powerful and wide at once',
+  double: 'Watch an ad to double your dirhams', privacy: 'Privacy options (ads)', manage: 'Manage', policy: 'Privacy policy', open: 'Open',
 };
 
 const DICTS: Record<Lang, Dict> = { ar, fr, en };

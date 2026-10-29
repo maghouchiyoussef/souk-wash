@@ -10,6 +10,7 @@ import { ITEMS, has, buy, powerMul, maxBar, ItemId } from './shop';
 import { LEVELS, LevelDef, starsFor, coinsFor } from './levels';
 import { disposeTree, World } from './worlds/world';
 import type { Model } from './vehicles/kit';
+import { initAds, rewardedReady, showRewarded, maybeInterstitial, privacyOptionsRequired, showPrivacyOptions } from './ads';
 
 // Lavage Mobile — غسيل متنقّل: خمس مهمّات، متجر، دراهم ونجوم.
 
@@ -79,6 +80,7 @@ let playTime = 0;
 let measureTimer = 0;
 let rustAcc = 0, rustFrames = 0, hintCooldown = 0;
 let clean = 0;
+let lastEarned = 0;
 
 const pctEl = $('pct'), barEl = $('bar-fill'), timeEl = $('time'), nozzleEl = $('nozzle-label'), toastEl = $('toast');
 const PAGES = ['title', 'map', 'shop', 'settings'];
@@ -155,6 +157,7 @@ function renderSettings() {
   $('set-haptics').classList.toggle('on', s.haptics);
   ($('set-sens') as HTMLInputElement).value = String(s.sens);
   document.querySelectorAll<HTMLElement>('#set-lang button').forEach((b) => b.classList.toggle('on', b.dataset.l === s.lang));
+  $('row-privacy').classList.toggle('hidden', !privacyOptionsRequired());
 }
 
 function applySettings() {
@@ -215,6 +218,7 @@ function finish() {
   const stars = starsFor(level, playTime);
   const earned = coinsFor(level, stars);
   save.coins += earned;
+  lastEarned = earned;
   save.stars[level.id] = Math.max(save.stars[level.id] ?? 0, stars);
   save.best[level.id] = Math.min(save.best[level.id] ?? 1e9, Math.round(playTime));
   persist();
@@ -223,6 +227,7 @@ function finish() {
   $('done-coins').textContent = String(earned);
   const idx = LEVELS.indexOf(level);
   $('done-next').classList.toggle('hidden', idx >= LEVELS.length - 1);
+  $('done-double').classList.toggle('hidden', !rewardedReady());
   setTimeout(() => { $('done').classList.remove('hidden'); coin(); }, 900);
 }
 
@@ -235,9 +240,23 @@ document.querySelectorAll('.back').forEach((b) => b.addEventListener('click', ()
 on('btn-pause', () => { if (state !== 'play') return; state = 'pause'; setSpray(0, false, false); $('pause').classList.remove('hidden'); });
 on('resume', () => { state = 'play'; $('pause').classList.add('hidden'); });
 on('quit', backToMap);
-on('done-next', () => startLevel(LEVELS[LEVELS.indexOf(level) + 1]));
-on('done-again', () => startLevel(level));
-on('done-map', backToMap);
+/** بعد نهاية المهمّة: إعلان بيني (كل مهمّتين، ليس في أوّل دقيقتين) ثم الإجراء */
+const afterDone = (fn: () => void) => async () => { await maybeInterstitial(); fn(); };
+$('done-next').addEventListener('click', afterDone(() => startLevel(LEVELS[LEVELS.indexOf(level) + 1])));
+$('done-again').addEventListener('click', afterDone(() => startLevel(level)));
+$('done-map').addEventListener('click', afterDone(backToMap));
+on('done-double', async () => {
+  $('done-double').classList.add('hidden');
+  setMusic(false);
+  const ok = await showRewarded();
+  setMusic(save.settings.music);
+  if (!ok) return;
+  save.coins += lastEarned;
+  persist();
+  $('done-coins').textContent = String(lastEarned * 2);
+  coin(); vibrate(hapticSuccess);
+});
+on('set-privacy', () => showPrivacyOptions());
 on('set-sound', () => { save.settings.sound = !save.settings.sound; renderSettings(); applySettings(); });
 on('set-music', () => { save.settings.music = !save.settings.music; renderSettings(); applySettings(); });
 on('set-haptics', () => { save.settings.haptics = !save.settings.haptics; renderSettings(); applySettings(); });
@@ -358,6 +377,7 @@ function frame() {
   loadLevel(lastOpen);
   show('title');
   requestAnimationFrame(frame);
+  initAds();
   (window as any).__game = {
     get buildMs() { return buildMs; }, get volume() { return model.volume; }, player, input, save,
     get clean() { return clean; }, startLevel: (i: number) => startLevel(LEVELS[i]),

@@ -24,6 +24,7 @@ jobs:
       - name: Install, typecheck and bundle the game
         run: |
           npm ci
+          node tools/apply-ads-config.mjs
           npm run typecheck
           npm run build
           npx cap sync android

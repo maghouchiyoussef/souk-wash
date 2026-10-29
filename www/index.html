@@ -131,6 +131,7 @@
   .modal{position:fixed; inset:0; z-index:7; display:flex; align-items:center; justify-content:center; background:rgba(5,15,22,.6);}
   .done-coins{font-size:22px; font-weight:700; color:var(--gold);}
   .btn-row{display:flex; gap:10px; margin-top:6px;}
+  .mbtn.double{background:linear-gradient(90deg,#f2b01e,#ffd76a); color:#2a1a00; animation:pulse 1.6s infinite;}
   #rotate{position:fixed; inset:0; z-index:9; display:none; align-items:center; justify-content:center; background:var(--bg); font-size:20px; font-weight:600;}
   body.portrait #rotate{display:flex;}
 </style>
@@ -207,7 +208,9 @@
     <div class="row"><span data-t="music"></span><button class="tgl" id="set-music"></button></div>
     <div class="row"><span data-t="haptics"></span><button class="tgl" id="set-haptics"></button></div>
     <div class="row"><span data-t="sens"></span><input type="range" id="set-sens" min="0.4" max="2" step="0.1"></div>
+    <div class="row hidden" id="row-privacy"><span data-t="privacy"></span><button class="ibtn" id="set-privacy" data-t="manage"></button></div>
     <div class="row"><span data-t="lang"></span><div class="seg" id="set-lang"><button data-l="ar">العربية</button><button data-l="fr">Français</button><button data-l="en">English</button></div></div>
+    <div class="row"><span data-t="policy"></span><a class="ibtn" href="privacy-policy.html" target="_blank" data-t="open" style="text-decoration:none"></a></div>
   </div>
 </div>
 
@@ -224,6 +227,7 @@
     <div id="done-stars"></div>
     <p style="margin:0"><span data-t="time"></span>: <b id="done-time" dir="ltr"></b></p>
     <div class="done-coins"><span dir="ltr">+<span id="done-coins">0</span></span> <span data-t="dh"></span></div>
+    <button class="mbtn double hidden" id="done-double"><span>📺</span> <span data-t="double"></span></button>
     <div class="btn-row">
       <button class="mbtn" id="done-next" data-t="next"></button>
       <button class="mbtn alt" id="done-again" data-t="again"></button>
